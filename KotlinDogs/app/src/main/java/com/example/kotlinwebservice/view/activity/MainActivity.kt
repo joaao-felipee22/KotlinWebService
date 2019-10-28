@@ -2,9 +2,12 @@ package com.example.kotlinwebservice.view.activity
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.inputmethod.InputMethodManager
+import android.widget.GridLayout
 import android.widget.SearchView
 import android.widget.Toast
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.kotlinwebservice.R
 import com.example.kotlinwebservice.model.network.APIService
@@ -21,7 +24,7 @@ class MainActivity : AppCompatActivity(),
     androidx.appcompat.widget.SearchView.OnQueryTextListener {
 
 
-    lateinit var imagesPuppies:List<String>
+    lateinit var listaDogs:List<String>
     private var dogsAdapter: DogsAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,10 +32,22 @@ class MainActivity : AppCompatActivity(),
         setContentView(R.layout.activity_main)
 
         pesquisar.setOnQueryTextListener(this)
+
+        floatingActionButton.setOnClickListener{
+            pupulaLista()
+        }
+
+    }
+
+    private fun getRetrofitList(): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://dog.ceo/api/breed/image/random")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
     }
 
 
-     private fun getRetrofit(): Retrofit {
+     private fun getRetrofitRaca(): Retrofit {
         return Retrofit.Builder()
             .baseUrl("https://dog.ceo/api/breed/")
             .addConverterFactory(GsonConverterFactory.create())
@@ -40,7 +55,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onQueryTextSubmit(query: String): Boolean {
-        searchByName(query.toLowerCase())
+        procuraPorNome(query.toLowerCase())
         return true
     }
 
@@ -49,13 +64,13 @@ class MainActivity : AppCompatActivity(),
     }
 
 
-    private fun searchByName(query: String) {
+    private fun procuraPorNome(query: String) {
         doAsync {
-            val call = getRetrofit().create(APIService::class.java).getCharecterByName("$query/images").execute()
+            val call = getRetrofitRaca().create(APIService::class.java).getCharecterByName("$query/images").execute()
             val puppies = call.body() as DogsResponse
             uiThread {
                 if (puppies.status == "success") {
-                    inicializaLista(puppies)
+                    inicializaListaComPesquisa(puppies)
                 } else {
                     Toast.makeText(this@MainActivity, "Deu merda na chamada", Toast.LENGTH_SHORT).show()
                 }
@@ -63,13 +78,37 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    private fun inicializaLista(cachorros: DogsResponse) {
-        if(cachorros.status == "success"){
-            imagesPuppies = cachorros.images
+    fun pupulaLista() {
+        doAsync {
+            val call = getRetrofitList().create(APIService::class.java).getRandomList().execute()
+            val puppies = call.body() as DogsResponse
+            uiThread {
+                if (puppies.status == "success") {
+                    inicializaLista(puppies)
+                } else {
+                    Log.i("LOG", "ERROR PUPULA LISTA")
+                }
+            }
         }
-        dogsAdapter = DogsAdapter(imagesPuppies)
+    }
+
+    private fun inicializaListaComPesquisa(cachorros: DogsResponse) {
+        if(cachorros.status == "success"){
+            listaDogs = cachorros.images
+        }
+        dogsAdapter = DogsAdapter(listaDogs)
         recyclerMain.setHasFixedSize(true)
         recyclerMain.layoutManager = LinearLayoutManager(this)
+        recyclerMain.adapter = dogsAdapter
+    }
+
+    private fun inicializaLista(cachorros: DogsResponse){
+        if(cachorros.status == "success"){
+            listaDogs = cachorros.images
+        }
+        dogsAdapter = DogsAdapter(listaDogs)
+        recyclerMain.setHasFixedSize(true)
+        recyclerMain.layoutManager = GridLayoutManager(this, 3)
         recyclerMain.adapter = dogsAdapter
     }
     

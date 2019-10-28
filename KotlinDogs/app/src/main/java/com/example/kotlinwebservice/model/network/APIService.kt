@@ -9,4 +9,7 @@ interface APIService {
 
     @GET
     fun getCharecterByName(@Url url: String) : Call<DogsResponse>
+
+    @GET
+    fun getRandomList() : Call<DogsResponse>
 }
